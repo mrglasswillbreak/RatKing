@@ -1,0 +1,7 @@
+pycryptodome==3.18.0
+Pillow==9.5.0
+pynput==1.7.6
+requests==2.31.0
+google-auth==2.23.0
+pywin32==306
+pyinstaller==5.13.0
