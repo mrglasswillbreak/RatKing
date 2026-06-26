@@ -1,0 +1,11 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    { "type": "Feature", "properties": { "kind": "green", "name": "LASU Ojo Campus" }, "geometry": { "type": "Polygon", "coordinates": [[[3.1876,6.4648],[3.1932,6.4648],[3.1932,6.4688],[3.1876,6.4688],[3.1876,6.4648]]] } },
+    { "type": "Feature", "properties": { "kind": "road" }, "geometry": { "type": "LineString", "coordinates": [[3.1888,6.4654],[3.1902,6.4666],[3.1916,6.4673],[3.1923,6.4661]] } },
+    { "type": "Feature", "properties": { "kind": "road" }, "geometry": { "type": "LineString", "coordinates": [[3.1902,6.4666],[3.1895,6.4681],[3.1916,6.4673]] } },
+    { "type": "Feature", "properties": { "kind": "building", "name": "Library" }, "geometry": { "type": "Polygon", "coordinates": [[[3.18995,6.46635],[3.19045,6.46635],[3.19045,6.46685],[3.18995,6.46685],[3.18995,6.46635]]] } },
+    { "type": "Feature", "properties": { "kind": "building", "name": "Faculty of Science" }, "geometry": { "type": "Polygon", "coordinates": [[[3.19125,6.46705],[3.19195,6.46705],[3.19195,6.4676],[3.19125,6.4676],[3.19125,6.46705]]] } },
+    { "type": "Feature", "properties": { "kind": "building", "name": "Senate Building" }, "geometry": { "type": "Polygon", "coordinates": [[[3.18915,6.4678],[3.18985,6.4678],[3.18985,6.46835],[3.18915,6.46835],[3.18915,6.4678]]] } }
+  ]
+}
