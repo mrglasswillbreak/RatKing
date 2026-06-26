@@ -1,0 +1,14 @@
+{
+  "name": "LASU Campus Navigator",
+  "short_name": "LASU Nav",
+  "description": "Offline-first navigation for Lagos State University Ojo campus.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f8fafc",
+  "theme_color": "#0a84ff",
+  "icons": [
+    { "src": "/icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

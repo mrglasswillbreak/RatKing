@@ -1,0 +1,13 @@
+@import 'maplibre-gl/dist/maplibre-gl.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { color-scheme: light; --sheet-bg: rgba(255,255,255,.82); }
+.dark { color-scheme: dark; --sheet-bg: rgba(17,24,39,.82); }
+html, body { height: 100%; overscroll-behavior: none; }
+body { margin: 0; background: #f8fafc; }
+.dark body { background: #020617; }
+.maplibregl-ctrl-bottom-left, .maplibregl-ctrl-bottom-right { display: none; }
+.glass-panel { background: var(--sheet-bg); backdrop-filter: blur(24px) saturate(160%); -webkit-backdrop-filter: blur(24px) saturate(160%); }
+.pulse-marker { width: 28px; height: 28px; transform-origin: center; }
